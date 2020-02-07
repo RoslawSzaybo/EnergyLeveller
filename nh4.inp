@@ -1,0 +1,115 @@
+output-file     = NH4.pdf
+width           = 8
+height          = 8
+energy-units    = E$_{exc}$ (eV)
+font size       = 22
+
+#   This is a comment. Lines that begin with a # are ignored.
+#   Available colours are those accepted by matplotlib 
+
+#   Now begins the states input
+
+#—————–  Path 1 ————————————————
+
+#   Add the first path, all paths are relative to the reactant energies so
+#   start at zero
+
+{
+    name        = ghost
+    text-colour = white
+    labelColour = white
+    column      = 2
+    energy      = 3.85 
+    column      = 2
+}
+{
+    name        = ghost2
+    text-colour = white
+    labelColour = white
+    column      = 2
+    energy      = -0.15
+    column      = 2
+}
+{
+    name        = 12a
+    text-colour = black
+    label       = $1^2A$
+    energy      = 0.0
+    labelColour = black
+    column      = 2
+}
+
+{
+    name        = 22a
+    text-colour = black
+    label       = $2^2A$
+    energy      = 3.428
+    labelColour = black
+    column      = 2
+    textOffset  = 0,-0.23
+    labelOffset  = 0,-0.32
+}
+
+{
+    name        = 12b1
+    text-colour = black
+    label       = $1^2B_1$
+    energy      = 1.817
+    labelColour = black
+    linksto     = 12b2:grey
+    column      = 1
+}
+{
+    name        = 12b2
+    text-colour = black
+    label       = $1^2B_2$
+    energy      = 1.817
+    labelColour = black
+    column      = 2
+    linksto     = 12b3:grey
+}
+{
+    name        = 12b3
+    text-colour = black
+    label       = $1^2B_3$
+    energy      = 1.817
+    labelColour = black
+    column      = 3
+}
+
+{
+    name        = newa2 
+    text-colour = black
+    label       = $2A$ aka $1^2B_i$\\   (adiabatic)
+    energy      = 1.7938
+    labelColour = black
+    column      = 4
+    labelOffset  = -0.45,0.0
+}
+
+{
+    name        = 22b1
+    text-colour = black
+    label       = $2^2B_1$
+    energy      = 3.515
+    labelColour = black
+    column      = 1
+}
+{
+    name        = 22b2
+    text-colour = black
+    label       = $2^2B_2$
+    energy      = 3.515
+    labelColour = black
+    column      = 2
+    textOffset  = 0,0.27
+    labelOffset  = 0,0.18
+}
+{
+    name        = 22b3
+    text-colour = black
+    label       = $2^2B_3$
+    energy      = 3.515
+    labelColour = black
+    column      = 3
+}
