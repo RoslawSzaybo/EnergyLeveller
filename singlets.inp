@@ -1,0 +1,217 @@
+output-file	 = singlets.eps
+width	 = 8
+height	 = 8
+energy-units	 = $E_{exc}$ (eV)
+font size	 = 16
+
+
+{
+	name	 = orto0
+	text-colour = black
+	label	 = $1^1$A$_{1}$
+	energy	 = 0.00
+	labelColour = black
+	column	 = 1
+}
+
+
+{
+	name	 = orto1
+	text-colour = black
+	label	 = $1^1$B$_{1}$
+	energy	 = 1.76
+	labelColour = black
+	column	 = 1
+}
+
+
+{
+	name	 = orto2
+	text-colour = black
+	label	 = $2^1$A$_{1}$
+	energy	 = 1.87
+	labelColour = black
+	column	 = 1
+}
+
+
+{
+	name	 = orto3
+	text-colour = black
+	label	 = $1^1$A$_{2}$
+	energy	 = 1.88
+	labelColour = black
+	column	 = 1
+}
+
+
+{
+	name	 = orto4
+	text-colour = black
+	label	 = $1^1$B$_{2}$
+	energy	 = 1.95
+	labelColour = black
+	column	 = 1
+}
+
+
+{
+	name	 = orto5
+	text-colour = black
+	label	 = $3^1$A$_{1}$
+	energy	 = 2.16
+	labelColour = black
+	column	 = 1
+}
+
+
+{
+	name	 = orto6
+	text-colour = black
+	label	 = $2^1$B$_{1}$
+	energy	 = 2.18
+	labelColour = black
+	column	 = 1
+}
+
+
+{
+	name	 = meta0
+	text-colour = black
+	label	 = $1^1$A$_{1}$
+	energy	 = 0.00
+	labelColour = black
+	column	 = 2
+}
+
+
+{
+	name	 = meta1
+	text-colour = black
+	label	 = $1^1$B$_{1}$
+	energy	 = 1.81
+	labelColour = black
+	column	 = 2
+}
+
+
+{
+	name	 = meta2
+	text-colour = black
+	label	 = $1^1$A$_{2}$
+	energy	 = 1.90
+	labelColour = black
+	column	 = 2
+}
+
+
+{
+	name	 = meta3
+	text-colour = black
+	label	 = $2^1$A$_{1}$
+	energy	 = 1.91
+	labelColour = black
+	column	 = 2
+}
+
+
+{
+	name	 = meta4
+	text-colour = black
+	label	 = $1^1$B$_{2}$
+	energy	 = 1.96
+	labelColour = black
+	column	 = 2
+}
+
+
+{
+	name	 = meta5
+	text-colour = black
+	label	 = $3^1$A$_{1}$
+	energy	 = 2.26
+	labelColour = black
+	column	 = 2
+}
+
+
+{
+	name	 = meta6
+	text-colour = black
+	label	 = $2^1$B$_{1}$
+	energy	 = 2.27
+	labelColour = black
+	column	 = 2
+}
+
+
+{
+	name	 = para0
+	text-colour = black
+	label	 = $1^1$A$_{g}$
+	energy	 = 0.00
+	labelColour = black
+	column	 = 3
+}
+
+
+{
+	name	 = para1
+	text-colour = black
+	label	 = $1^1$B$_{1g}$
+	energy	 = 1.91
+	labelColour = black
+	column	 = 3
+}
+
+
+{
+	name	 = para2
+	text-colour = black
+	label	 = $1^1$B$_{2u}$
+	energy	 = 1.93
+	labelColour = black
+	column	 = 3
+}
+
+
+{
+	name	 = para3
+	text-colour = black
+	label	 = $1^1$B$_{2g}$
+	energy	 = 1.95
+	labelColour = black
+	column	 = 3
+}
+
+
+{
+	name	 = para4
+	text-colour = black
+	label	 = $1^1$B$_{1u}$
+	energy	 = 1.98
+	labelColour = black
+	column	 = 3
+}
+
+
+{
+	name	 = para5
+	text-colour = black
+	label	 = $1^1$B$_{3u}$
+	energy	 = 2.34
+	labelColour = black
+	column	 = 3
+}
+
+
+{
+	name	 = para6
+	text-colour = black
+	label	 = $2^1$A$_{g}$
+	energy	 = 2.39
+	labelColour = black
+	column	 = 3
+}
+
+

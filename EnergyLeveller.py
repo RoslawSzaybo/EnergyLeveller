@@ -14,31 +14,42 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-# latex font 
-plt.rcParams.update({'font.size': 22})
-plt.rcParams.update({'font.family': 'serif'})
-plt.rcParams.update({'text.usetex': True})
+def getEnergy(state):
+    # sort key
+    return state.energy
 
 class Diagram:
     """
-    Holds global values for the diagram and handles drawing through Draw() method.
+    Holds global values for the diagram and handles drawing.
     """
-    statesList  = {}
-    dashes      = [6.0,3.0] # ink, skip
-    outputName  = ""
-    columns     = 0
-    width       = 0
-    height      = 0
-    energyUnits = ""
-    do_legend   = False
-
     def __init__(self, width, height, fontSize, outputName):
         self.width = width
         self.height = height
         self.outputName = outputName
+        # latex font 
+        plt.rcParams.update({'font.size': fontSize})
+        plt.rcParams.update({'font.family': 'serif'})
+        plt.rcParams.update({'text.usetex': True})
 
-        self.fig = plt.figure(figsize=(self.width, self.height))
+        # to be upgraded once I know all the answers
+        # size of a font in the axis coordinates units
+        self.fontSpacing = 0.12
+        # extra space between text -- this is only a scaling factor
+        self.interspacing = 0.4
+
+        #self.fig = plt.figure(figsize=(self.width, self.height))
+        self.fig = plt.figure()
         self.ax = self.fig.add_subplot(111)
+       
+        self.columnWidth = 1.0
+        
+        self.statesList  = {}
+        self.dashes      = [6.0,3.0] # ink, skip
+        self.columns     = 0
+        self.energyUnits = ""
+        self.do_legend   = False
+        self.COLORS      = {}
+        
 
     def AddState(self, state):
         state.name = state.name.upper()
@@ -51,94 +62,239 @@ class Diagram:
             self.statesList[state.name] = state
         else:
             print("ERROR: States must have unique names. State " + state.name + " is already in use!")
-            sys.exit("Non unique state names.")
+            raise ValueError("Non unique state names.")
 
     def DetermineEnergyRange(self):
+        # this is never used
         if len(self.statesList) == 0:
-            sys.exit("No states in diagram.")
+            raise ValueError("No states in diagram.")
         maxE = -10E20
         minE = 10E20
-        for state in self.statesList.itervalues():
+        for state in self.statesList.keys():
             if state.energy > maxE:
                 maxE = state.energy
             if state.energy < minE:
                 minE = state.energy
         self.axesTop = maxE
         self.axesMin = minE
-        self.axesOriginNormalised =  1+(minE / (maxE - minE))
+        self.axesOriginNormalised =  1+(minE / (maxE - minE)) 
         return [minE, maxE]
 
     def MakeLeftRightPoints(self):
-        columnWidth = 1
+        columnWidth = self.columnWidth
 
-        for key, state in self.statesList.items():
+        for state in self.statesList.values():
             state.leftPointx = state.column*columnWidth + state.column*columnWidth/2.0
             state.leftPointy = state.energy
             state.rightPointx = state.leftPointx + columnWidth
             state.rightPointy = state.energy
+            state.labelPosition = state.energy
 
-    def Draw(self):
-        self.ax.axhline(0.0,color='gray',linestyle=':')
+    def MaxColumnNo(self):
+        # find smallest and largest column number
+        maxcol = -1
+        for _, state in self.statesList.items():
+            if state.column > maxcol:
+                maxcol = state.column
+        return maxcol
 
-#   Draw the states
-        for key in self.statesList.keys():
-            state = self.statesList[key]
-            self.ax.plot([state.leftPointx, state.rightPointx], [state.leftPointy, state.rightPointy], c=state.color, lw=3, ls='-', label=state.legend)
+    def MinColumnNo(self):
+        # find smallest and largest column number
+        mincol = 100
+        for state in self.statesList.values():
+            if state.column < mincol:
+                mincol = state.column
+        return mincol
 
-#   Draw their labels
-        offset = self.ax.get_ylim()
-        offset = offset[1]*0.01
-        for key in self.statesList.keys():
-            state = self.statesList[key]
-            self.ax.text(state.leftPointx + state.labelOffset[0], state.leftPointy + state.labelOffset[1] + offset, 
-                state.label, 
-                color=state.labelColor,
-                verticalalignment='bottom')
-            self.ax.text(state.leftPointx  + state.textOffset[0], state.leftPointy + state.textOffset[1] - offset, 
-                "  " + str(state.energy),
-                color=state.labelColor,
-                verticalalignment='top')
+    def FindPositionHelperIsCrowded(self, column):
+        fontSpacing = self.fontSpacing
+        crowded = False
+        # check for overlaps
+        column.sort(key = getEnergy) 
+        for i, state in enumerate(column):        
+            if i > 0 and column[i-1].labelPosition + fontSpacing > state.labelPosition:
+                column[i-1].isCrowded = True
+                state.isCrowded = True 
+                crowded = True
+            else:
+                state.isCrowded = False
+        return column, crowded
+    
+    def ResolveCrowded(self, column):
+        first_crowded = len(column)
+        last_crowded = -1
+        for i in range(len(column)):
+            # he first is not yet detected
+            if first_crowded == len(column):
+                # first catch
+                if column[i].isCrowded:
+                    first_crowded = i
+            # the last is not yet detected
+            elif last_crowded == -1:
+                # there is a catch 
+                if not column[i].isCrowded:
+                    last_crowded = i-1
+                # or the end of the list
+                elif i == len(column)-1:
+                    last_crowded = i
+                    
+            # the last crowded was detected, time to make some space
+            if last_crowded != -1:
+                bottom = column[first_crowded].labelPosition
+                top    = column[last_crowded].labelPosition + self.fontSpacing
+                middle = bottom + (top-bottom)/2.0
+                demand = (last_crowded - first_crowded + 1) * self.fontSpacing
+                demand *= 1.4
+                newStart= middle - 0.5 * demand
+                for i in range(first_crowded, last_crowded+1):
+                    # first `i` is first_crowded
+                    # last `i` is last_crowded
+                    howMuchUp = (i - first_crowded) * self.fontSpacing * 1.4
+                    column[i].labelPosition = newStart + howMuchUp
+                # make sure that labels fit into the graph
+                newTop = column[last_crowded].labelPosition + self.fontSpacing  
+                roof   = self.ax.get_ylim()[1]
+                if newTop > roof:
+                    stickOut = newTop - roof
+                    # shift them down
+                    for i in range(first_crowded, last_crowded + 1):
+                        column[i].labelPosition -= stickOut
+                # continue searching for conflicts
+                last_crowded = -1
+                first_crowded = len(column)
+        return column
+        
+    def updatePositions(self, column):
+        # brute force
+        for i in range(len(column)):
+            name = column[i].name
+            for key, state in self.statesList.items() :
+                if state.name == name:
+                    self.statesList[key] = column[i]
+                    break
+        
+    def FindLabelPosition(self):
+        # make sure that labels don't overlap
+        maxcol = self.MaxColumnNo()
+        mincol = self.MinColumnNo()
+        # go over each column and assing positions in each of them separately
+        for c in range(mincol, maxcol+1):    
+            column = []
+            for key, state in self.statesList.items():
+                if state.column == c:
+                    column.append(state)
+            if len(column) == 0:
+                continue
+            # loop over the states and push them away until you remove overlaps
+            while True:
+                column, crowded = self.FindPositionHelperIsCrowded(column)
+                if not crowded:
+                    self.updatePositions(column)
+                    break
+                # its crowded
+                column = self.ResolveCrowded(column)
 
-#   Draw the dashed lines connecting them
-        for key in self.statesList.keys():
-            state = self.statesList[key]
-            if (state.linksTo != ""):
-                for link in state.linksTo.split(','):
-                    link = link.strip()
-                    raw = link.split(':')
-                    dest = raw[0]
-                    if len(raw) > 1:
-                        color = raw[1]
-                    else:
-                        color = 'BLACK'
-                    if dest in self.statesList:
-                        self.ax.plot([state.rightPointx, self.statesList[dest].leftPointx], [state.rightPointy, self.statesList[dest].leftPointy],
-                            c=color, ls='--', lw=1)
-                    else:
-                        print("Name: " + dest + " is unknown.")
-
+    def DrawCanvas(self):
+    # Positions of text are manipulated so it has to be called more than once
+        # set x lims
+        maxcol = self.MaxColumnNo()
+        xleft  = -0.5*self.columnWidth
+        xright = (maxcol+2.5)*self.columnWidth
+        self.ax.set_xlim(xleft, xright)
         self.ax.set_ylabel(str(self.energyUnits))
-        self.ax.set_xticks([]) 
-        if self.do_legend:
-            self.ax.legend()
-        self.fig.savefig(self.outputName)
+        self.ax.set_xticks([])
+        self.fig.tight_layout()
+        self.fig.canvas.draw()
+
+    def DrawBars(self):
+        #   Draw states' bars to indicate energy level
+            # bar is only 2/7 of the state space
+        for state in self.statesList.values():
+            length = state.rightPointx - state.leftPointx
+            left = state.leftPointx + 2.0/7.0*length
+            right = state.leftPointx + 4.0/7.0*length
+            self.ax.plot([left, right], 
+                         [state.leftPointy, state.rightPointy], 
+                         c=state.color, 
+                         lw=3, 
+                         ls='-')
+
+    def DrawLabels(self):
+        #   Draw states' labels to the right from energy bars
+        length = self.columnWidth 
+        xoffset = length*5.0/7.0
+        
+        for key, state in self.statesList.items():
+            self.ax.text(state.leftPointx + xoffset, 
+                    state.labelPosition,
+                    state.label,
+                    color=state.labelColor,
+                    verticalalignment='center')
+
+    def DrawEnergies(self):
+        #   Draw states' energies to the left from energy bars
+        length = self.columnWidth 
+        xoffset = -length*1.75/7.0
+        for state in self.statesList.values():
+            self.ax.text(state.leftPointx + xoffset, 
+                state.labelPosition,
+                f"{state.energy:4.2f}",
+                color=state.labelColor,
+                verticalalignment='center')
+
+    def DrawConnections(self):
+        length = self.columnWidth 
+        font = 0.14 * self.fontSpacing           
+        for state in self.statesList.values():
+            label = state.labelPosition
+            energy = state.energy
+            # aim at the middle of the text
+            if energy != label:
+                left = state.leftPointx 
+                energyRight = length*1.1/7.0 
+                barLeft = length*1.85/7.0 
+                barRight = length*4.15/7.0
+                labelLeft = length*4.85/7.0
+                
+                col = state.color
+                lin = '-'
+                wid = 0.5
+                mar = ','
+                
+                self.ax.plot([left + energyRight, left + barLeft],
+                    [label + font, energy], 
+                    c = col, ls = lin, lw = wid, marker = mar)
+                
+                self.ax.plot([left + barRight, left + labelLeft],
+                    [energy, label + font],
+                    c = col, ls = lin, lw = wid, marker = mar)
+
+    def Save(self):
+        self.fig.savefig(fname = "singlets.eps", 
+                         format = 'eps')
 
 class State:
-    name        = ""
-    color       = ""
-    labelColor  = ""
-    linksTo     = ""
-    label       = ""
-    legend      = None
-    energy      = 0.0
-    normalisedPosition = 0.0
-    column      = 1
-    leftPointx  = 0
-    leftPointy  = 0
-    rightPointx = 0
-    rightPointy = 0
-    labelOffset = (0,0)
-    textOffset  = (0,0)
+    def __init__(self):
+        self.name        = ""
+        self.color       = ""
+        self.labelColor  = ""
+        self.linksTo     = ""
+        self.label       = ""
+        self.legend      = None
+        self.energy      = 0.0 
+        self.normalisedPosition = 0.0
+        self.column      = 1
+        self.leftPointx  = 0
+        self.leftPointy  = 0
+        self.rightPointx = 0
+        self.rightPointy = 0
+        self.isCrowded   = False
+        self.labelPosition= 0.0
+        self.labelOffset = (0,0)
+        self.textOffset  = (0,0)
+        self.imageOffset = (0,0)
+        self.imageScale  = 1.0
+        self.image = None
 
 ######################################################################################################
 #           Input reading block
@@ -149,14 +305,13 @@ def ReadInput(filename):
         inp = open(filename,'r')
     except:
         print("Error opening file. File: " + filename + " may not exist.")
-        sys.exit("Could not open Input file.")
+        raise SystemExit("Could not open Input file: {:}".format(filename))
 
     stateBlock = False
     statesList = []
     width = 0
     height = 0
     fontSize = 8
-    outputName = ""
     energyUnits = ""
     colorsToAdd = {}
     lc = 0
@@ -167,7 +322,7 @@ def ReadInput(filename):
             if (stateBlock):
                 if (line.strip()[0] == "{"):
                     print("Unexpected opening '{' within state block on line " + str(lc) + ".\nPossible forgotten closing '}'.")
-                    sys.exit("ERROR: Unexpected { on line " + str(lc))
+                    raise ValueError("ERROR: Unexpected { on line " + str(lc))
                 if (line.strip()[0] == "}"):
                     stateBlock = False
                 else:
@@ -208,7 +363,7 @@ def ReadInput(filename):
                                 tx = float(raw[1][0])
                                 ty = float(raw[1][1])
                                 statesList[-1].labelOffset = (tx, ty)
-                            except:
+                            except ValueError:
                                 print("ERROR: Could not read real number for label offset on line " + str(lc)+ ":\n\t"+line)
                         elif (raw[0] == "TEXTOFFSET" or raw[0] == "TEXT OFFSET" or raw[0] == "TEXT-OFFSET"):
                             raw[1] = raw[1].split(',')
@@ -216,13 +371,33 @@ def ReadInput(filename):
                                 tx = float(raw[1][0])
                                 ty = float(raw[1][1])
                                 statesList[-1].textOffset = (tx, ty)
-                            except:
+                            except ValueError:
                                 print("ERROR: Could not read real number for text offset on line " + str(lc)+ ":\n\t"+line)
                         elif raw[0] == "LEGEND":
                             statesList[-1].legend = raw[1]
+                        elif raw[0] == "IMAGE":
+                            try:
+                                statesList[-1].image = plt.imread(raw[-1])
+                            except IOError:
+                                raise IOError("Failed to find image on line {:}".format(lc))
+                        elif "IMAGE" in raw[0] and "OFFSET" in raw[0]:
+                            raw[1] = raw[1].split(',')
+                            try:
+                                tx = float(raw[1][0])
+                                ty = float(raw[1][1])
+                                statesList[-1].imageOffset = (tx, ty)
+                            except ValueError:
+                                print("ERROR: Could not read real number for image offset on line " + str(lc)+ ":\n\t"+line)
+                        elif "IMAGE" in raw[0] and "SCALE" in raw[0]:
+                            try:
+                                scale = float(raw[1])
+                                if scale < 0.1:
+                                    print("image scale cannot be < 0.1, setting to 0.1/")
+                                statesList[-1].imageScale = max(scale, 0.1)
+                            except ValueError:
+                                print("ERROR: Could not read real number for image scale on line " + str(lc)+ ":\n\t"+line)
                         else:
                             print("Ignoring unrecognised line " + str(lc) + ":\n\t"+line)
-
             elif (line.strip()[0] == "{"):
                 statesList.append(State())
                 stateBlock = True   # we have entered a state block
@@ -267,15 +442,15 @@ def ReadInput(filename):
                         print("WARNING: Skipping unknown line " + str(lc) + ":\n\t" + line)
     if (stateBlock):
         print("WARNING: Final closing '}' is missing.")
-    if (width == 0):
+    if (height == 0):
         print("ERROR: Image height not set! e.g.:\nheight = 500")
-        sys.exit("Height not set")
+        raise ValueError("Height not set")
     if (width == 0):
         print("ERROR: Image width not set! e.g.:\nwidth = 500")
-        sys.exit("Width not set")
+        raise ValueError("Width not set")
     if (outName == ""):
         print("ERROR: output file name not set! e.g.:\n output-file = example.pdf")
-        sys.exit("Output name not set")
+        raise ValueError("Output name not set")
 
     outDiagram = Diagram(width, height, fontSize, outName)
     outDiagram.energyUnits = energyUnits
@@ -292,18 +467,6 @@ def ReadInput(filename):
 
 
 ######################################################################################################
-#          Example printing function. Skip to bottom.
-######################################################################################################
-
-def MakeExampleFile():
-    output = open("example.inp", 'w')
-
-    output.write("output-file     = example.pdf\nwidth           = 8\nheight          = 8\nenergy-units    = $\\Delta$E  kJ/mol\nfont size       = 10\n\n#   This is a comment. Lines that begin with a # are ignored.\n#   Available colours are those accepted by matplotlib \n\n#   Now begins the states input\n\n#—————–  Path 1 ————————————————\n\n#   Add the first path, all paths are relative to the reactant energies so\n#   start at zero\n\n{\n    name        = reactants\n    text-colour = black\n    label       = CH$_3$O$\\cdot$ + X\n    energy      = 0.0\n    labelColour = black\n    linksto     = pre-react1:red, transition2:#003399, pre-react3:#009933\n    column      = 1\n}\n\n{\n    name        = pre-react1\n    text-colour = red\n    label       = CH$_3$O$\\cdot$ $\\ldots$ X\n    energy      = -10.5\n    labelColour = red\n    linksto     = transition1:red\n    column      = 2\n}\n\n{\n    name        = transition1\n    text-colour = red\n    label       = [CH$_3$O$\\cdot$ $\\ldots$ X]$^{++}$\n    energy      =    +20.1\n    labelColour = red\n    linksto     = post-react1:red\n    column      = 3\n}\n\n{\n    name        = post-react1\n    text-colour = red\n    label       = $\\cdot$CH$_2$OH $\\ldots$ X\n    energy      = -8.2\n    labelColour = red\n    linksto     = products:red\n    column      = 4\n    legend      = Catalyst 2\n}\n\n#   All the paths in this practical end at the same energy… why?\n\n{\n    name        = products\n    text-colour = black\n    label       =    $\\cdot$CH$_2$OH + X\n    energy      = -2.0\n    labelColour = black\n    column      = 5\n}\n#—————–  Path 2 ————————————————\n{\n    name        = transition2\n    text-colour = #003399\n    label       = [CH$_3$O$\\cdot$]$^{++}$\n    energy      = +30.1\n    labelColour = #003399\n    linksto     = products:#003399\n    column      = 3\n    legend      = Uncatalysed\n}\n\n#—————–  Path 3 ————————————————\n{\n    name        = pre-react3\n    text-colour = #009933\n    label       =    CH$_3$O$\\cdot$ $\\ldots$ X\n    energy      = -8.3\n    labelColour = #009933\n    linksto     = transition3:#009933\n    column      = 2\n    legend      = Catalyst 1\n    labelOffset = 0,1\n    textOffset  = 0,1.4\n}\n\n{\n    name        = transition3\n    text-colour = #009933\n    label       = [CH$_3$O$\\cdot$ $\\ldots$ X]$^{++}$\n    energy      = +25.4\n    labelColour = #009933\n    linksto     = post-react3:#009933\n    column      = 3\n}\n\n{\n    name        = post-react3\n    text-colour = #009933\n    label       = $\\cdot$CH$_2$OH $\\ldots$ X\n    energy      = -6.1\n    labelColour = #009933\n    linksto     = products:#009933\n    column      = 4\n    labelOffset = 0,1\n    textOffset  = 0,1.4\n}\n")
-
-    output.close()
-    print("Made example file as 'example.inp'.")
-
-######################################################################################################
 #           Main driver function
 ######################################################################################################
 def main():
@@ -313,17 +476,20 @@ def main():
     print("o=======================================================o")
     if (len(sys.argv) == 1):
         print("\nI need an input file!\n")
-        if (not os.path.exists("example.inp")):
-            print("\nAn example file will be made.")
-            MakeExampleFile()
-        sys.exit("No Input file.")
+        raise IOError("No Input file provided.")
     if (len(sys.argv) > 2):
         print("Incorrect arguments. Correct call:\npython EnergyLeveler.py <INPUT FILE>")
-        sys.exit("Incorrect Arguments.")
+        raise ValueError("Incorrect Arguments.")
 
     diagram = ReadInput(sys.argv[1])
     diagram.MakeLeftRightPoints()
-    diagram.Draw()
+    diagram.DrawBars()
+    diagram.DrawCanvas()
+    diagram.FindLabelPosition()
+    diagram.DrawLabels()
+    diagram.DrawEnergies()
+    diagram.DrawConnections()
+    diagram.Save()
 
     print("o=======================================================o")
     print("         Image "+diagram.outputName+" made!")
