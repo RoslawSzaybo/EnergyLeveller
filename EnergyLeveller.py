@@ -64,22 +64,6 @@ class Diagram:
             print("ERROR: States must have unique names. State " + state.name + " is already in use!")
             raise ValueError("Non unique state names.")
 
-    def DetermineEnergyRange(self):
-        # this is never used
-        if len(self.statesList) == 0:
-            raise ValueError("No states in diagram.")
-        maxE = -10E20
-        minE = 10E20
-        for state in self.statesList.keys():
-            if state.energy > maxE:
-                maxE = state.energy
-            if state.energy < minE:
-                minE = state.energy
-        self.axesTop = maxE
-        self.axesMin = minE
-        self.axesOriginNormalised =  1+(minE / (maxE - minE)) 
-        return [minE, maxE]
-
     def MakeLeftRightPoints(self):
         columnWidth = self.columnWidth
 
